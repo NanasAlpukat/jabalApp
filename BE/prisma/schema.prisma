@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  biodata   Biodata?
+  tokens    Token[]
+  student   Student?
+  teacher   Teacher?
+}
+
+model Biodata {
+  id        String   @id @default(uuid())
+  address   String
+  phone     String
+  birthDate DateTime
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id],onDelete: Cascade)
+}
+
+model Jurusan {
+  id        String    @id @default(uuid())
+  nama      String
+  kode      String    @unique
+  students  Student[]
+}
+
+model Kelas {
+  id       String    @id @default(uuid())
+  kode     KodeKelas    @unique  // Contoh: "10", "11", "12"
+  students Student[] // Relasi: satu kelas banyak siswa
+}
+
+
+model Student {
+  id              String         @id @default(uuid())
+  userId          String         @unique
+  nis             Int            @unique
+  jurusanId       String
+  kelasId         String
+  tahunMasuk      Int
+  penhasilanOrtu  Int?
+  statusBeasiswa  Boolean?       @default(false)
+  skorSAW         Float?
+  rankBeasiswa    Int?
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jurusan         Jurusan        @relation(fields: [jurusanId], references: [id])
+  kelas           Kelas          @relation(fields: [kelasId], references: [id])
+  mapel           Mapel[]        @relation("StudentMapel")
+  nilai           Nilai[]
+  penilaian       Penilaian[]
+  haasilSAW       HasilSAW[]
+}
+
+
+
+model Teacher {
+  id            String         @id @default(uuid())
+  userId        String         @unique
+  nik           Int            @unique
+  kodeMapel     String?
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mapels        Mapel?         @relation(fields: [kodeMapel], references: [kode])
+}
+
+
+model Mapel {
+  id        String     @id @default(uuid())
+  nama      String
+  kode      String     @unique
+  teachers  Teacher[]
+  students  Student[]  @relation("StudentMapel") // ← tanpa `references`
+  nilai     Nilai[]
+}
+
+
+model Nilai {
+  id              String         @id @default(uuid())
+  studentId       String
+  mapelId         String
+  upsensi         Int
+  nilai           Int
+
+  student         Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  mapel   Mapel  @relation(fields: [mapelId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, mapelId]) // Satu siswa hanya punya satu nilai per mapel
+}
+
+// model Kriteria {
+//   id        String   @id @default(uuid())
+//   nama      String   // contoh: "Akademik", "Kehadiran"
+//   bobot     Float    // contoh: 0.5, 0.3
+//   tipe      TipeKriteria // benefit / cost
+// }
+
+model Penilaian {
+  id         String   @id @default(uuid())
+  studentId  String
+  kriteria   String
+  nilai      Float
+
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId,kriteria])
+}
+
+
+model HasilSAW {
+  id         String   @id @default(uuid())
+  studentId  String   @unique
+  skor       Float
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+
+model Token {
+  id        String   @id @default(uuid())
+  token     String
+  expiresAt DateTime
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+
+enum Role {
+  admin
+  teacher
+  student
+}
+enum KodeKelas {
+  K10
+  K11
+  K12
+}
+
+
+
+
